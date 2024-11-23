@@ -28,4 +28,5 @@ class Task extends Model
         return $this->belongsToMany(User::class, 'setting_task_user');
     }
     
+    
 }

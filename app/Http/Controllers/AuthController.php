@@ -32,13 +32,11 @@ class AuthController extends Controller
     // Fungsi login user
     public function login(Request $request)
     {
-        // Validasi input email dan password
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
-        // Cari user berdasarkan email
         $user = User::where('email', $request->email)->first();
 
         // Jika user tidak ditemukan
@@ -55,11 +53,11 @@ class AuthController extends Controller
             ], 401);
         }
 
-
         $response = [
             'message' => 'Login berhasil.',
             'username' => $user->name,
             'email' => $user->email,
+            'user_id' => $user->id, // Menambahkan ID pengguna
             'token' => $user->createToken('auth_token')->plainTextToken
         ];
 
@@ -67,6 +65,11 @@ class AuthController extends Controller
             'data' => $response
         ]);
     }
+
+
+
+    //login jw
+
     // Logout User
     public function logout(Request $request)
     {

@@ -16,14 +16,30 @@ class ProjectController extends Controller
     public function index()
     {
         try {
-            $project = Project::get();
-            return response()->json($project, 200);
-        } catch (Exception $e) {
+            // Ambil semua proyek beserta pengguna yang ter-assign
+            $projects = Project::with(['users' => function ($query) {
+                $query->select('users.id', 'users.email'); // Ambil hanya ID dan email user
+            }])->get();
+    
+            // Format data agar hanya menampilkan email pengguna
+            $projectsWithUsers = $projects->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'description' => $project->description,
+                    'assigned_users' => $project->users->pluck('email'), // Ambil hanya email pengguna
+                ];
+            });
+    
+            return response()->json($projectsWithUsers, 200);
+        } catch (\Exception $e) {
             return response()->json(['message' => 'Terjadi kesalahan saat mengambil data project.'], 500);
         }
     }
+    
+    
 
-    // Menambahkan project baru
+    // Menambahkan project
     public function store(Request $request)
     {
         try {
@@ -31,25 +47,37 @@ class ProjectController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
             ]);
-
-            $randomImageUrl = 'https://random-image-pepebigotes.vercel.app/api/random-image';
+    
+            // Ambil user yang sedang login
+            $user = $request->user();
+    
+            if (!$user) {
+                return response()->json(['message' => 'User tidak ditemukan.'], 404);
+            }
+    
+            // Ambil gambar random dari API
+            $randomImageUrl = 'https://picsum.photos/200/300';
             $imageContents = file_get_contents($randomImageUrl);
-
+    
             if ($imageContents === false) {
                 return response()->json(['message' => 'Gagal mengambil gambar dari API.'], 500);
             }
-
+    
+            // Simpan gambar ke storage
             $imageName = 'project_' . uniqid() . '.jpg';
             $imagePath = 'projects/' . $imageName;
             Storage::put($imagePath, $imageContents);
-
+    
             // Buat project baru
             $project = Project::create([
                 'name' => $request->name,
                 'description' => $request->description,
                 'image' => Storage::url($imagePath),
             ]);
-
+    
+            // Assign user ke project
+            $project->users()->attach($user->id);
+    
             return response()->json($project, 201);
         } catch (ValidationException $e) {
             return response()->json([
@@ -57,14 +85,13 @@ class ProjectController extends Controller
                 'errors' => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            // Debugging error
             return response()->json([
                 'message' => 'Gagal menambahkan project.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
-
+    
 
     // Mengubah project
     public function update(Request $request, $id)

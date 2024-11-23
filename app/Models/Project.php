@@ -17,7 +17,7 @@ class Project extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'setting_project_user');
+        return $this->belongsToMany(User::class, 'setting_project_user', 'project_id', 'user_id');
     }
 
     public function todoLists()
